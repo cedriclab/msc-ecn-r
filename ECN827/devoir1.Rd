@@ -42,7 +42,7 @@ arimaFromSampleSize <- function(sample, size, p){
 
 sizes <- c(50, 100, 200, 300, 400);
 pOrders <- c(5, 9, 16, 22, 26);
-for (i in 1:5){arimaFromSampleSize(y, sizes[i], pOrders[i]);}
+#for (i in 1:5){arimaFromSampleSize(y, sizes[i], pOrders[i]);}
 
 
 #	Question 4
