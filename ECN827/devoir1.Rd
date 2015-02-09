@@ -29,8 +29,6 @@ sizes <- c(50, 100, 200, 300, 400);
 pOrders <- c(5, 9, 16, 22, 26);
 for (i in 1:5){arimaFromSampleSize(y, sizes[i], pOrders[i]);}
 
-#	Question 3
-#question3 <- read.dta("question3.dta");
 
 #	Question 4
 #question4 <- read.dta("question4.dta");
