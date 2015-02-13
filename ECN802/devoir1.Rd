@@ -25,51 +25,69 @@ lagBy <- function(x,k=1){
 
 q1 <- read.dta("question1.dta");
 
-x1 <- c(q1$x1);
-x2 <- c(q1$x2);
-x2l1 <- lagBy(x2,1);
-x2l4 <- lagBy(x2,4);
-x2l5 <- lagBy(x2,5);
-y <- c(q1$y);
-yl1 <- lagBy(y,1);
-yl4 <- lagBy(y,4);
-yl5 <- lagBy(y,5);
-
-#	Retire les 5 premiers éléments
 q1Data <- data.frame(
 	cbind(
-		x1=x1[6:250], 
-		x2=x2[6:250], 
-		x2l1=x2l1[6:250], 
-		x2l4=x2l4[6:250], 
-		x2l5=x2l5[6:250], 
-		y=y[6:250], 
-		yl1=yl1[6:250], 
-		yl4=yl4[6:250], 
-		yl5=yl5[6:250]
+		x1=c(q1$x1), 
+		x2=c(q1$x2), 
+		x2l1=lagBy(q1$x2,1), 
+		x2l4=lagBy(q1$x2,4), 
+		x2l5=lagBy(q1$x2,5), 
+		y=c(q1$y), 
+		yl1=lagBy(q1$y,1), 
+		yl4=lagBy(q1$y,4), 
+		yl5=lagBy(q1$y,5)
+	)
+);
+
+#	Modèle non-linéaire
+
+nonLinearFunction <- function(a1, a4, b1, b2){
+	ychap <- ((1-a1-a4-a1*a4)*b1) + x2*b2 + a1*(yl1 - b2*x2l1) + a4*(yl4 - b2*x2l4) + a1*a4*(yl5 + b2*x2l5);
+};
+nonLinearModel <- y ~ ((1-a1-a4-a1*a4)*b1) + x2*b2 + a1*(yl1 - b2*x2l1) + a4*(yl4 - b2*x2l4) + a1*a4*(yl5 + b2*x2l5);
+startValues <- c(a1=0, a4=0, b1=0, b2=0);
+
+q1nlm <- nls(formula=nonLinearModel, data=q1Data, start=startValues, na.action=na.omit, trace=TRUE);
+
+#	Retire les 5 premiers éléments
+q1DataNoNA <- data.frame(
+	cbind(
+		x1=q1Data$x1[6:250], 
+		x2=q1Data$x2[6:250], 
+		x2l1=q1Data$x2l1[6:250], 
+		x2l4=q1Data$x2l4[6:250], 
+		x2l5=q1Data$x2l5[6:250], 
+		y=q1Data$y[6:250], 
+		yl1=q1Data$yl1[6:250], 
+		yl4=q1Data$yl4[6:250], 
+		yl5=q1Data$yl5[6:250]
 	)
 );
 
 #	Estimer le modèle par MCO
-q1_mco <- lm(formula = y ~ x2 + yl1 + yl4 + yl5 + x2l1 + x2l4 + x2l5, data = q1Data);
-summary(q1_mco);
 
-#	Génère une série temporelle multivariée
-q1DataTS <- ts(data.frame(
-	cbind(
-		x1=x1, 
-		x2=x2, 
-		x2l1=x2l1, 
-		x2l4=x2l4, 
-		x2l5=x2l5, 
-		y=y, 
-		yl1=yl1, 
-		yl4=yl4, 
-		yl5=yl5
-	)
-));
+linearModel <- y ~ x2 + yl1 + yl4 + yl5 + x2l1 + x2l4 + x2l5;
+q1Mco <- lm(formula=linearModel, data=q1Data);
+q1McoCoefs <- coef(q1Mco);
+summary(q1Mco);
 
-#	Estimation du modèle ARMA(1,1)
-q1_arima <- arima(ts(y), order=c(1,0,1));
-summary(q1_arima);
-coef(q1_arima);
+#	Relance l'estimation du modèle non-linéaire avec les coefficients des MCOs comme valeurs de départ
+startValues <- c(a1=0.5092815, a4=-0.1536069, b1=0.5966792, b2=0.5416752);
+q1nlm2 <- nls(formula=nonLinearModel, data=q1Data, start=startValues, na.action=na.omit, trace=TRUE);
+summary(q1nlm2);
+
+
+
+#################
+#	QUESTION 3	#
+#################
+
+q3 <- read.dta("count.dta");
+
+#################
+#	QUESTION 4	#
+#################
+
+q4x <- c(85, 76, 58, 38, 47, 68, 75, 21, 60, 61);
+q4mu <- mean(q4x);
+q4sigma2 <- var(q4x);
