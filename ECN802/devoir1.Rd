@@ -113,12 +113,17 @@ q3Data <- data.frame(q3);
 poisson <- glm(med ~ child + access + health, data=q3Data, family="poisson");
 summary(poisson);
 
+q3Data$const <- rep(1, q3N);
 q3Data$ychapPoisson <- c(predict(poisson));
 q3Data$uchapPoisson <- rep(0, q3N);
 
 for (i in 1:q3N){
 	q3Data$uchapPoisson[i] <- q3Data$ychapPoisson[i] - q3Data$med[i];
+	q3Data$zbeta[i] <- q3Data$uchapPoisson[i]^2 - q3Data$med[i];
 }
+
+regOPG <- lm(const ~ zbeta, data=q3Data);
+summary(regOPG);
 
 
 #################

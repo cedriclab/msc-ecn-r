@@ -187,15 +187,52 @@ for (i in 2:length(q5$y)) {
 	q5$deltaY[i] <- q5$y[i] - q5$y[i-1];
 	q5$deltaX[i] <- q5$x[i] - q5$x[i-1];
 }
+
+#	Vérifie la forme du processus autorégressif pour Y
+arTestY <- ar(x = q5$deltaY, order.max=10);
+print(arTestY);
+
+#	Génère les lags pour Y
 q5$deltaYl1 <- lagBy(q5$deltaY, 1);
+q5$deltaYl2 <- lagBy(q5$deltaY, 2);
+q5$deltaYl3 <- lagBy(q5$deltaY, 3);
+q5$deltaYl4 <- lagBy(q5$deltaY, 4);
+q5$deltaYl5 <- lagBy(q5$deltaY, 5);
+q5$deltaYl6 <- lagBy(q5$deltaY, 6);
+q5$deltaYl7 <- lagBy(q5$deltaY, 7);
+q5$deltaYl8 <- lagBy(q5$deltaY, 8);
 
 #	Modèle sans tendance déterministe
-adfMCO <- lm(deltaY ~ Yl1 + deltaYl1, data=q5);
-summary(adfMCO);
+adfMCOY <- lm(deltaY ~ Yl1 + deltaYl1 + deltaYl2 + deltaYl3 + deltaYl4 + deltaYl5 + deltaYl6 + deltaYl7 + deltaYl8, data=q5);
+summary(adfMCOY);
 
 #	Modèle avec tendance déterministe
-adfDetMCO <- lm(deltaY ~ t + Yl1 + deltaYl1, data=q5);
-summary(adfDetMCO);
+adfDetMCOY <- lm(deltaY ~ t + Yl1 + deltaYl1 + deltaYl2 + deltaYl3 + deltaYl4 + deltaYl5 + deltaYl6 + deltaYl7 + deltaYl8, data=q5);
+summary(adfDetMCOY);
+
+#	Vérifie la forme du processus autorégressif pour Y
+arTestX <- ar(x = q5$deltaX, order.max=10);
+print(arTestX);
+
+#	Génère les lags pour X
+q5$deltaXl1 <- lagBy(q5$deltaX, 1);
+q5$deltaXl2 <- lagBy(q5$deltaX, 2);
+q5$deltaXl3 <- lagBy(q5$deltaX, 3);
+q5$deltaXl4 <- lagBy(q5$deltaX, 4);
+q5$deltaXl5 <- lagBy(q5$deltaX, 5);
+q5$deltaXl6 <- lagBy(q5$deltaX, 6);
+q5$deltaXl7 <- lagBy(q5$deltaX, 7);
+q5$deltaXl8 <- lagBy(q5$deltaX, 8);
+
+#	Modèle sans tendance déterministe
+adfMCOX <- lm(deltaX ~ Xl1 + deltaXl1 + deltaXl2 + deltaXl3 + deltaXl4 + deltaXl5 + deltaXl6 + deltaXl7 + deltaXl8, data=q5);
+summary(adfMCOX);
+
+#	Modèle avec tendance déterministe
+adfDetMCOX <- lm(deltaY ~ t + Xl1 + deltaXl1 + deltaXl2 + deltaXl3 + deltaXl4 + deltaXl5 + deltaXl6 + deltaXl7 + deltaXl8, data=q5);
+summary(adfDetMCOX);
+
+
 
 #	Estimation simple du modèle par les MCO
 basicMCO <- lm(y ~ t + x, data=q5);
@@ -206,3 +243,23 @@ for (i in 1:200){
 	q5$uchap[i] <- q5$ychap[i] - q5$y[i];
 	q5$deltaUchap[i] <- q5$uchap[i] - q5$uchap[i-1];
 } 
+
+#	Vérifie la forme du processus autorégressif pour û
+arTestUchap <- ar(x = q5$deltaUchap, order.max=10);
+print(arTestUchap);
+
+q5$uchapl1 <- lagBy(q5$uchap, 1);
+
+#	Génère les lags pour delta û
+q5$deltaUchapl1 <- lagBy(q5$deltaUchap, 1);
+q5$deltaUchapl2 <- lagBy(q5$deltaUchap, 2);
+q5$deltaUchapl3 <- lagBy(q5$deltaUchap, 3);
+q5$deltaUchapl4 <- lagBy(q5$deltaUchap, 4);
+q5$deltaUchapl5 <- lagBy(q5$deltaUchap, 5);
+q5$deltaUchapl6 <- lagBy(q5$deltaUchap, 6);
+q5$deltaUchapl7 <- lagBy(q5$deltaUchap, 7);
+q5$deltaUchapl8 <- lagBy(q5$deltaUchap, 8);
+
+#	Modèle avec tendance déterministe
+adfDetMCOUchap <- lm(deltaUchap ~ t + uchapl1 + deltaUchapl1 + deltaUchapl2 + deltaUchapl3 + deltaUchapl4 + deltaUchapl5 + deltaUchapl6 + deltaUchapl7 + deltaUchapl8, data=q5);
+summary(adfDetMCOUchap);
