@@ -19,6 +19,8 @@ lagBy <- function(x,k=1){
 }
 
 
+
+
 #################
 #	QUESTION 1	#
 #################
@@ -133,3 +135,23 @@ summary(regOPG);
 q4x <- c(85, 76, 58, 38, 47, 68, 75, 21, 60, 61);
 q4mu <- mean(q4x);
 q4sigma2 <- var(q4x);
+q4sigma <- sqrt(q4sigma2);
+
+#	Définit la fonciton du log-vraisemblance
+logLikelyHood <- function(xt, mu, sigma){
+	l <- -0.9189385 - log(sigma, base=exp(1)) - (1/(2*sigma*sigma))*((xt-mu)^2)
+}
+
+lunconstrained <- rep(0, 10);
+lcontrained <- rep(0, 10);
+
+for (t in 1:10) {
+	lunconstrained[t] <- logLikelyHood(q4x[t], q4mu, q4sigma);
+	lcontrained[t] <- logLikelyHood(q4x[t], q4mu, q4sigma);
+}
+
+lunconstChap <- sum(lunconstrained);
+lconstChap <- sum(lconstrained);
+
+LR <- 2*(lunconstChap - lconstChap);
+print(LR);
