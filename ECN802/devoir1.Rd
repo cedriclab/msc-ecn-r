@@ -8,7 +8,9 @@
 
 #	IMPORTANT: Indiquer le répertoire de travail avec setwd("path/to/directory") avant de commencer
 
-library(foreign);
+library("foreign");
+library("MASS");
+library("pscl")
 
 #	UTILITAIRES
 
@@ -54,21 +56,6 @@ startValues <- c(a1=0, a4=0, b1=0, b2=0);
 
 q1nlm <- nls(formula=nonLinearModel, data=q1Data, start=startValues, na.action=na.omit, trace=TRUE);
 summary(q1nlm);
-
-#	Retire les 5 premiers éléments
-q1DataNoNA <- data.frame(
-	cbind(
-		x1=q1Data$x1[6:250], 
-		x2=q1Data$x2[6:250], 
-		x2l1=q1Data$x2l1[6:250], 
-		x2l4=q1Data$x2l4[6:250], 
-		x2l5=q1Data$x2l5[6:250], 
-		y=q1Data$y[6:250], 
-		yl1=q1Data$yl1[6:250], 
-		yl4=q1Data$yl4[6:250], 
-		yl5=q1Data$yl5[6:250]
-	)
-);
 
 #	Estimer le modèle par MCO
 
@@ -165,6 +152,70 @@ for (i in 1:q3N){
 
 regOPG <- lm(const ~ zbeta, data=q3Data);
 summary(regOPG);
+
+#	Régression Cameron-Trivedi
+q3Data$camTrivLeft <- rep(0, q3N);
+q3Data$camTrivRight <- rep(0, q3N);
+
+for (i in 1:q3N){
+	q3Data$camTrivLeft[i] <- (1/sqrt(2))*exp((-1)*q3Data$ychapPoisson[i]) * q3Data$zbeta[i];
+	q3Data$camTrivRight[i] <- (1/sqrt(2))*exp((-1)*q3Data$ychapPoisson[i]);
+}
+regCamTriv <- lm(camTrivLeft ~ camTrivRight, data=q3Data);
+summary(regCamTriv);
+
+
+#	Modèle négatif binomial
+regNB <- glm.nb(med ~ access, data=q3Data);
+summary(regNB);
+
+q3Data$ychapNB <- c(predict(regNB));
+q3Data$uchapNB <- rep(0, q3N);
+for (i in 1:q3N){
+	q3Data$uchapNB[i] <- q3Data$ychapNB[i] - q3Data$med[i];
+}
+
+#	Modèle zero-inflated Poisson (ZIP)
+regZIP <- zeroinfl(med ~ access, data=q3Data, dist="poisson");
+summary(regZIP);
+
+q3Data$ychapZIP <- c(predict(regZIP));
+q3Data$uchapZIP <- rep(0, q3N);
+for (i in 1:q3N){
+	q3Data$uchapZIP[i] <- q3Data$ychapZIP[i] - q3Data$med[i];
+}
+
+#	Test de Vuong
+for (i in 1:q3N){
+	q3Data$m[i] <- log((q3Data$ychapZIP[i]/q3Data$ychapNB[i]), base=exp(1));
+}
+mbar <- mean(q3Data$m);
+V <- (sqrt(q3N)*mbar)/sqrt(var(q3Data$m));
+print(V);
+
+#	F-test, Poisson vs NB
+
+SCRNB <- sum(c(q3Data$uchapNB^2));
+SCRPoisson <- sum(c(q3Data$uchapPoisson^2));
+
+Fnp <- ((SCRNB - SCRPoisson)/2)/(SCRPoisson/(q3N-4));
+print(Fnp);
+
+#	Ratio de vraisemblance, Poisson vs ZIP
+
+poisCoefs <- coef(poisson);
+beta1 <- poisCoefs["(Intercept)"][[1]];
+beta2 <- poisCoefs["child"][[1]];
+beta3 <- poisCoefs["access"][[1]];
+beta4 <- poisCoefs["health"][[1]];
+for (i in 1:q3N){
+	xbeta <- beta1 + beta2*q3Data$child[i] + beta3*q3Data$access[i] + beta4*q3Data$health[i];
+	q3Data$poisLogLike[i] <- (-1)*exp(xbeta) + (q3Data$med[i]*xbeta) - lfactorial(q3Data$med[i]);
+}
+poisLogLikelyhood <- sum(q3Data$poisLogLike);
+
+LRnp <- 2*((-1)*996.3 - poisLogLikelyhood); 	# -996.3 est le log-vraisemblance du modèle ZIP, qu'on peut voir via summary(regZIP);
+print(LRnp);
 
 
 #################
