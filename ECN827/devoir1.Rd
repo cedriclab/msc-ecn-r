@@ -7,7 +7,7 @@
 #
 
 #	IMPORTANT: Indiquer le répertoire de travail avec setwd("path/to/directory") avant de commencer
-#setwd("../../ECN827/Devoir 1");
+
 
 library(foreign);
 
@@ -48,25 +48,40 @@ summary(q3_AR_n);
 coeffs <- coef(q3_AR_n);
 alpha <- coeffs["ar1"];
 theta <- coeffs["ma1"];
-eps0 <- coeffs["intercept"];
-epsilons <- q3_AR_n$residuals;
 
-#	Utilise les coefficients obtenus dans la dernière régression pour 
-#	obtenir les valeurs prédites de Y via le processus AR
-ychap <- rep(0, length(y));
-ychap[1] <- y[1];
-for (t in 2:length(y)) {
-	for (j in 1:(t-1)) {
-		ychap[t] <- ychap[t] + ((-1)^(j+1) * theta^(j-1) * (alpha + theta) * y[t-j]);
-	}
-	ychap[t] <- ychap[t] + ((-1)^(t+1) * ((theta^(t+1) * alpha * y[1]) + (theta^t * epsilons[1])));
+
+#	Utilisation de la fonction ar() pour déterminer l'ordre p du processus autorégressif
+q3AR <- ar(y);
+print(q3AR);
+
+#	Définit une fonction qui résout le système d'équations permettant de trouver la valeur de alpha-chapeau et theta-chapeau à partir des beta-chapeau de chaque modèle AR
+getAlphaThetaHats <- function(beta1, beta2){
+	thetaChap <- (beta2*(-1))/beta1;
+	alphaChap <- beta1 - thetaChap;
+	
+	print(paste("alphaChap: ", alphaChap, " | thetaChap: ", thetaChap));
 }
 
-q3ar5 <- ar(x = y[1:50], aic = FALSE, order.max = 5);
-q3ar9 <- ar(x = y[1:100], aic = FALSE, order.max = 9);
-q3ar16 <- ar(x = y[1:200], aic = FALSE, order.max = 16);
-q3ar22 <- ar(x = y[1:300], aic = FALSE, order.max = 22);
-q3ar26 <- ar(x = y[1:400], aic = FALSE, order.max = 26);
+#	Processus AR et ARMA
+
+#	Définit une fonction générale
+compareARandARMA <- function(p,size){
+	q3ar <- ar(x = y[1:size], aic = FALSE, order.max = p);
+	q3ARMA <- arima(y[1:size], order=c(p,0,1));
+	
+	print(paste("ARMA(", p, ",1 ): "));
+	print(paste("alphaChap: ", coef(q3ARMA)["ar1"], " | thetaChap: ", coef(q3ARMA)["ma1"]));
+	print(paste("AR(", p, "): "));
+	getAlphaThetaHats(q3ar$ar[1], q3ar$ar[2]);
+	print(" ");
+}
+
+compareARandARMA(5,50);
+compareARandARMA(9,100);
+compareARandARMA(16,200);
+compareARandARMA(22,300);
+compareARandARMA(26,400);
+
 
 
 
@@ -169,6 +184,7 @@ print(DMStat);
 #	QUESTION 5	#
 #################
 question5 <- read.dta("question5.dta");
+q5N <- length(q5$y);
 
 q5 <- data.frame(
 	cbind(
@@ -263,3 +279,49 @@ q5$deltaUchapl8 <- lagBy(q5$deltaUchap, 8);
 #	Modèle avec tendance déterministe
 adfDetMCOUchap <- lm(deltaUchap ~ t + uchapl1 + deltaUchapl1 + deltaUchapl2 + deltaUchapl3 + deltaUchapl4 + deltaUchapl5 + deltaUchapl6 + deltaUchapl7 + deltaUchapl8, data=q5);
 summary(adfDetMCOUchap);
+
+
+#	Modèle à correction d'erreur
+
+q5EcmLm <- y ~ t + Yl1 + x;
+q5ECM <- lm(q5EcmLm, data=q5);
+summary(q5ECM);
+
+#	Test de Breusch-Godfrey
+
+q5$ychapECM1 <- c(0, predict(q5ECM));
+q5$uchapECM1 <- rep(0, q5N);
+for (t in 1:q5N) {
+	q5$uchapECM1[t] <- q5$ychapECM1[t] - q5$y[t];
+}
+q5$uchapECM1l1 <- lagBy(q5$uchapECM1, 1);
+
+q5BG <- lm(uchapECM1 ~ t + Yl1 + x + uchapECM1l1, data=q5);
+summary(q5BG);
+
+#	Régression de Y sur X
+q5Easy <- lm(y ~ x, data=q5);
+summary(q5Easy);
+
+q5$ychapEasy <- predict(q5Easy);
+q5$uchapEasy <- rep(0, q5N);
+for (t in 1:q5N) {
+	q5$uchapEasy[t] <- q5$ychapEasy[t] - q5$y[t];
+}
+q5$uchapEasyl1 <- lagBy(q5$uchapEasy, 1);
+
+q5BG2 <- lm(uchapEasy ~ x + uchapEasyl1, data=q5);
+summary(q5BG2);
+
+q5MCOdet <- lm(y ~ t + x, data=q5);
+summary(q5MCOdet);
+
+q5$ychapMCOdet <- predict(q5MCOdet);
+q5$uchapMCOdet <- rep(0, q5N);
+for (t in 1:q5N) {
+	q5$uchapMCOdet[t] <- q5$ychapMCOdet[t] - q5$y[t];
+}
+q5$uchapMCOdetl1 <- lagBy(q5$uchapMCOdet, 1);
+
+q5BG3 <- lm(uchapMCOdet ~ x + t + uchapMCOdetl1, data=q5);
+summary(q5BG3);
