@@ -75,6 +75,42 @@ andrewsTest <- function(indVar, depVar, piVal=0.15){
 	));
 }
 
+chanMethod <- function(indVar, depVar, piVal=0.15){
+	localOrder <- order(indVar);
+	localInd <- indVar[localOrder];
+	localDep <- depVar[localOrder];
+	
+	chanN <- length(localInd);
+	chanLowerBound <- as.integer(piVal*chanN);
+	chanUpperBound <- as.integer((1-piVal)*chanN);
+	
+	chanSCR <- rep(NA, chanN);
+	chanModels <- rep(NA, chanN);
+	
+	for (i in chanLowerBound:chanUpperBound){
+		
+		It <- as.numeric(localDep > localDep[i]);
+		Itinv <- as.numeric(It == 0);
+
+		localDataFrame <- data.frame(cbind(
+			"ind" = c(localInd),
+			"dep1" = c(localDep * It),
+			"dep2" = c(localDep * Itinv)
+		));
+		
+		localModel <- lm(ind ~ dep1 + dep2, data=localDataFrame);
+		chanModels[i] <- localModel;
+		chanSCR[i] <- sum(localModel$residuals^2);
+	}
+	
+	return(list(
+		"SCR" = chanSCR,
+		"minSCR" = min(chanSCR, na.rm=TRUE),
+		"threshold" = localDep[which.min(chanSCR)],
+		"minSCRindex" = which.min(chanSCR),
+		"model" = chanModels[which.min(chanSCR)]
+	));
+}
 
 
 
@@ -117,25 +153,18 @@ q1garch11 <- garchFit(index ~ garch(1,1), data=q1);
 #	QUESTION 2	#
 ################
 
-question2 <- read.dta("macro.dta");
+question2 <- read.dta("macrov12.dta");
 q2 <- data.frame(
 	cbind(
-		"no" = c(question2["no"][[1]])
+		"temps" = c(question2["temps"][[1]]),
+		"y" = c(question2["y"][[1]]),
+		"r" = c(question2["r"][[1]]),
+		"p" = c(question2["p"][[1]])
 	)
 );
-n2 <- length(q3$no);
+n2 <- length(q2$y);
 
-################
-#	QUESTION 3	#
-################
 
-question3 <- read.dta("tauxint.dta");
-q3 <- data.frame(
-	cbind(
-		"no" = c(question3["no"][[1]])
-	)
-);
-n3 <- length(q3$no);
 
 ################
 #	QUESTION 4	#
@@ -161,3 +190,19 @@ print(q4Andrews$maxKFindex);
 q4["yl1split"] <- c(rep(0,20), q4$yl1[21:30]);
 q4ARandrews <- lm(y ~ yl1 + yl1split, data=q4);
 summary(q4ARandrews);
+
+q4yorder <- order(q4$y);
+q4["ysorted"] <- q4$y[q4yorder];
+q4["yl1sorted"] <- q4$yl1[q4yorder];
+
+q4Chan <- chanMethod(q4$y[2:30], q4$yl1[2:30]);
+plot(q4$y[2:30], q4Chan$SCR);
+print(q4Chan$threshold);
+
+q4It <- c(0, as.numeric(q4$yl1[2:30] > q4Chan$threshold));
+q4Itinv <- as.numeric(q4It==0);
+q4["yl1Chan1"] <- q4$yl1 * q4It;
+q4["yl1Chan2"] <- q4$yl1 * q4Itinv;
+
+q4modelChan <- lm(y ~ yl1Chan1 + yl1Chan2, data=q4);
+summary(q4modelChan);

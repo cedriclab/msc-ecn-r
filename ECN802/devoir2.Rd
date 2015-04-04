@@ -11,6 +11,8 @@
 #	setwd("../../ECN802/Devoir 2");
 library("foreign");
 library("sandwich");
+library("locpol");
+library("KernSmooth");
 
 #	UTILITAIRES
 
@@ -21,8 +23,6 @@ lagBy <- function(x,k=1){
 	
 	c(lagNAs, laggedVector)
 }
-
-
 
 
 #	EXERCICES
@@ -70,6 +70,7 @@ print(q1nw5);
 q1nw10 <- NeweyWest(q1MCO, lag=10);
 print(q1nw10);
 
+#	Brute-force le p optimal
 q1diffs <- rep(0, 100);
 for (i in 1:100) {
 	localNW <- NeweyWest(q1MCO, lag=i);
@@ -88,17 +89,58 @@ print(q1sigma);
 #	QUESTION 2	#
 #################
 
-question2 <- read.dta("question2.dta");
+question2 <- read.dta("question2v12.dta");
 q2 <- data.frame(
 	cbind(
-		"obs"=c(question2["obs"][[1]])
+		"temps"=c(question2["temps"][[1]]),
+		"y"=c(question2["y"][[1]]),
+		"c"=c(question2["c"][[1]]),
+		"dy"=c(question2["dy"][[1]]),
+		"dy1"=c(question2["dy1"][[1]]),
+		"dc1"=c(question2["dc1"][[1]]),
+		"dy12"=c(question2["dy12"][[1]])
 	)
 );
-q2n <- length(q2$obs);
+q2n <- length(q2$temps);
+
+#	Génère dc
+q2["dc"] <- rep(NA, q2n);
+for (i in 2:q2n) {
+	q2$dc[i] <- q2$c[i] - q2$c[i-1];
+}
+
+q2mco <- lm(dc ~ dy + dy1, data=q2);
+summary(q2mco);
+q2$uchapMCO <- c(NA, NA, q2mco$residuals);
+q2validityTest <- lm(uchapMCO ~ dc1 + dy1, data=q2);
+summary(q2validityTest);
+
+q2inst <-lm(dy ~ dc1 + dy1, data=q2);
+summary(q2inst);
+
+q2inst2 <-lm(dy ~ dy1, data=q2);
+summary(q2inst2);
 
 #################
 #	QUESTION 3	#
 #################
+
+epanechnikovKernel <- function(z){
+	if (abs(z) >= 2.236068) {
+		return(0);
+	} else {
+		return((3*(1-((z*z)/5)))/8.944272);
+	}
+}
+
+localEstimator <- function(xVect, yVect, x0, h){
+	le <- 0;
+	n <- length(xVect);
+	for (i in 1:n){
+		le <- le + (yVect[i]*epanechnikovKernel((x0-xVect[i])/h));
+	}
+	return(le/n);
+}
 
 question3 <- read.dta("question3.dta");
 q3 <- data.frame(
@@ -109,3 +151,36 @@ q3 <- data.frame(
 	)
 );
 q3n <- length(q3$obs);
+
+q3kdensity1 <- density(q3$x, bw=0.001, kernel="epanechnikov");
+print(q3kdensity1);
+plot(q3kdensity1$x, q3kdensity1$y);
+
+q3kdensity2 <- density(q3$x, bw=0.1, kernel="epanechnikov");
+print(q3kdensity2);
+plot(q3kdensity2$x, q3kdensity2$y);
+
+q3kdensity3 <- density(q3$x, bw=0.2, kernel="epanechnikov");
+print(q3kdensity3);
+plot(q3kdensity3$x, q3kdensity3$y);
+
+q3kdensity4 <- density(q3$x, bw=1, kernel="epanechnikov");
+print(q3kdensity4);
+plot(q3kdensity4$x, q3kdensity4$y);
+
+q3kdensity5 <- density(q3$x, bw=10, kernel="epanechnikov");
+print(q3kdensity5);
+plot(q3kdensity5$x, q3kdensity5$y);
+
+hopt <- 1.059*sqrt(var(q3$x))*(q3n^(-0.2));
+q3kdensityOpt <- density(q3$x, bw=hopt, kernel="epanechnikov");
+print(q3kdensityOpt);
+plot(q3kdensityOpt$x, q3kdensityOpt$y);
+
+print(localEstimator(q3$x, q3$y, hopt));
+
+lcePoly <- locpoly(q3$x, q3$y, kernel="epanechnikov", bandwidth=hopt, drv=0);
+print(localEstimator(lcePoly$x, lcePoly$y, hopt));
+
+llePoly <- locpoly(q3$x, q3$y, kernel="epanechnikov", bandwidth=hopt, drv=1);
+print(localEstimator(llePoly$x, llePoly$y, hopt));
