@@ -13,6 +13,8 @@ library("foreign");
 library("sandwich");
 library("locpol");
 library("KernSmooth");
+library("gmm");
+
 
 #	UTILITAIRES
 
@@ -118,8 +120,68 @@ summary(q2validityTest);
 q2inst <-lm(dy ~ dc1 + dy1, data=q2);
 summary(q2inst);
 
-q2inst2 <-lm(dy ~ dy1, data=q2);
-summary(q2inst2);
+q2["dychap"] <- c(NA, NA, q2inst["fitted.values"][[1]]);
+
+q2iv2 <- lm(dc ~ dychap + dy1, data=q2);
+summary(q2iv2);
+
+q2instrumentMatrix <- as.matrix(
+	cbind(
+		"dc1" = c(q2$dc1),
+		"dy1" = c(q2$dy1)
+	)
+);
+
+q2gmm1 <- gmm(dc ~ dy + dy1, q2instrumentMatrix, type="twoStep", vcov="HAC", prewhite=1, data=q2);
+summary(q2gmm1);
+
+q2gmm2 <- gmm(dc ~ dy + dy1, q2instrumentMatrix, type="twoStep", vcov="HAC", prewhite=2, data=q2);
+summary(q2gmm2);
+
+q2gmm3 <- gmm(dc ~ dy + dy1, q2instrumentMatrix, type="twoStep", vcov="HAC", prewhite=3, data=q2);
+summary(q2gmm3);
+
+q1["dy1"] <- lagBy(q1$dy, 1);
+q1["dy2"] <- lagBy(q1$dy, 2);
+q1["dc1"] <- lagBy(q1$dc, 1);
+
+q12mco <-lm(dc ~ dy + dy1, data=q1);
+q1["instUchap"] <- c(NA, q12mco$residuals);
+
+q12validity <- lm(instUchap ~ dc1 + dy1 + dy2, data=q1);
+summary(q12validity);
+
+q12inst <-lm(dy ~ dc1 + dy1 + dy2, data=q1);
+summary(q12inst);
+
+q1["dychap"] <- c(NA, NA, q12inst["fitted.values"][[1]]);
+
+q12iv2 <- lm(dc ~ dychap + dy1, data=q1);
+summary(q12iv2);
+
+q12instrumentMatrix <- as.matrix(
+	cbind(
+		"dc1" = c(q1$dc1),
+		"dy1" = c(q1$dy1),
+		"dy2" = c(q1$dy2)
+	)
+);
+
+q12gmm1 <- gmm(dc ~ dy + dy1, q12instrumentMatrix, type="twoStep", vcov="HAC", prewhite=1, data=q1);
+summary(q12gmm1);
+
+q12gmm2 <- gmm(dc ~ dy + dy1, q12instrumentMatrix, type="twoStep", vcov="HAC", prewhite=2, data=q1);
+summary(q12gmm2);
+
+q12gmm3 <- gmm(dc ~ dy + dy1, q12instrumentMatrix, type="twoStep", vcov="HAC", prewhite=3, data=q1);
+summary(q12gmm3);
+
+q12gmmIter <- gmm(dc ~ dy + dy1, q12instrumentMatrix, type="iterative", vcov="HAC", prewhite=6, data=q1);
+summary(q12gmmIter);
+
+q1["uchapGMM"] <- c(NA, NA, q12gmmIter$residuals);
+q12sargan <- lm(uchapGMM ~ dc1 + dy1 + dy2, data=q1);
+summary(q12sargan);
 
 #################
 #	QUESTION 3	#
