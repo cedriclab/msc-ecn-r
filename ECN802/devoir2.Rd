@@ -183,6 +183,9 @@ q1["uchapGMM"] <- c(NA, NA, q12gmmIter$residuals);
 q12sargan <- lm(uchapGMM ~ dc1 + dy1 + dy2, data=q1);
 summary(q12sargan);
 
+#	LIML, fait sur Stata: ivregress liml dc L1.dy (dy = L1.dy L2.dy L1.dc)
+
+
 #################
 #	QUESTION 3	#
 #################
