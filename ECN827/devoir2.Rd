@@ -184,8 +184,8 @@ SCRs <- rep(NA, maxP);
 for (i in 4:maxP) {
 	localq2var <- VAR(q2, p=i);
 	SCRs[i] <- sum(localq2var$varresult$y$residuals^2 + localq2var$varresult$r$residuals^2 + localq2var$varresult$p$residuals^2)
-	aics[i] <- aic((SRCs[i]/n2), n2, ((3*i)+1));
-	bics[i] <- bic((SRCs[i]/n2), n2, ((3*i)+1));
+	aics[i] <- aic((SCRs[i]/n2), n2, ((3*i)+1));
+	bics[i] <- bic((SCRs[i]/n2), n2, ((3*i)+1));
 }
 print(which.min(aics));
 print(which.min(bics));
@@ -200,7 +200,14 @@ print(causR$Granger);
 causP <- causality(goodVar, cause="p");
 print(causP$Granger);
 
+q2impResp1 <- irf(goodVar, impulse=c("r"), response=c("y", "p"), n.ahead=1);
+print(q2impResp1$irf$r);
 
+q2impResp2 <- irf(goodVar, impulse=c("r"), response=c("p", "y"), n.ahead=1);
+print(q2impResp2$irf$r);
+
+q2impResp3 <- irf(VAR(data.frame(cbind("r"=q2$r, "p"=q2$p)), p=1), impulse=c("r"), response=c("p"), n.ahead=1);
+print(q2impResp3$irf$r);
 
 #################
 #	QUESTION 4	#
