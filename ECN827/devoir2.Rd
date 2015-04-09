@@ -200,10 +200,10 @@ print(causR$Granger);
 causP <- causality(goodVar, cause="p");
 print(causP$Granger);
 
-q2impResp1 <- irf(goodVar, impulse=c("r"), response=c("y", "p"), n.ahead=1);
+q2impResp1 <- irf(goodVar, impulse=c("r"), response=c("y", "p"), n.ahead=5);
 print(q2impResp1$irf$r);
 
-q2impResp2 <- irf(goodVar, impulse=c("r"), response=c("p", "y"), n.ahead=1);
+q2impResp2 <- irf(goodVar, impulse=c("r"), response=c("p", "y"), n.ahead=5);
 print(q2impResp2$irf$r);
 
 q2impResp3 <- irf(VAR(data.frame(cbind("r"=q2$r, "p"=q2$p)), p=1), impulse=c("r"), response=c("p"), n.ahead=1);
